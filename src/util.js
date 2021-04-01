@@ -36,11 +36,9 @@ export const getTouchyEvent = () => {
     event.initMouseEvent("MSPointerDown", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
   } else {
     if (document.createEvent) {
-      console.log('getTouchyEvent document.createEvent if');
       event = document.createEvent("MouseEvent");
       event.initMouseEvent("mousedown", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
     } else {
-      console.log('getTouchyEvent document.createEvent else');
       event = new MouseEvent('mousedown', {
         'view': window,
         'bubbles': true,

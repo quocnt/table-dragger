@@ -1029,7 +1029,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 17 */
 /***/ (function(module, exports) {
 
-	var core = module.exports = { version: '2.6.5' };
+	var core = module.exports = { version: '2.6.12' };
 	if (typeof __e == 'number') __e = core; // eslint-disable-line no-undef
 
 
@@ -1461,7 +1461,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	})('versions', []).push({
 	  version: core.version,
 	  mode: __webpack_require__(14) ? 'pure' : 'global',
-	  copyright: '© 2019 Denis Pushkarev (zloirock.ru)'
+	  copyright: '© 2020 Denis Pushkarev (zloirock.ru)'
 	});
 
 
@@ -1682,12 +1682,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	var isArray = __webpack_require__(66);
 	var anObject = __webpack_require__(22);
 	var isObject = __webpack_require__(23);
+	var toObject = __webpack_require__(52);
 	var toIObject = __webpack_require__(38);
 	var toPrimitive = __webpack_require__(28);
 	var createDesc = __webpack_require__(29);
 	var _create = __webpack_require__(34);
 	var gOPNExt = __webpack_require__(67);
 	var $GOPD = __webpack_require__(69);
+	var $GOPS = __webpack_require__(64);
 	var $DP = __webpack_require__(21);
 	var $keys = __webpack_require__(36);
 	var gOPD = $GOPD.f;
@@ -1704,7 +1706,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var AllSymbols = shared('symbols');
 	var OPSymbols = shared('op-symbols');
 	var ObjectProto = Object[PROTOTYPE];
-	var USE_NATIVE = typeof $Symbol == 'function';
+	var USE_NATIVE = typeof $Symbol == 'function' && !!$GOPS.f;
 	var QObject = global.QObject;
 	// Don't use setters in Qt Script, https://github.com/zloirock/core-js/issues/173
 	var setter = !QObject || !QObject[PROTOTYPE] || !QObject[PROTOTYPE].findChild;
@@ -1814,7 +1816,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  $DP.f = $defineProperty;
 	  __webpack_require__(68).f = gOPNExt.f = $getOwnPropertyNames;
 	  __webpack_require__(65).f = $propertyIsEnumerable;
-	  __webpack_require__(64).f = $getOwnPropertySymbols;
+	  $GOPS.f = $getOwnPropertySymbols;
 	
 	  if (DESCRIPTORS && !__webpack_require__(14)) {
 	    redefine(ObjectProto, 'propertyIsEnumerable', $propertyIsEnumerable, true);
@@ -1863,6 +1865,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	  getOwnPropertyNames: $getOwnPropertyNames,
 	  // 19.1.2.8 Object.getOwnPropertySymbols(O)
 	  getOwnPropertySymbols: $getOwnPropertySymbols
+	});
+	
+	// Chrome 38 and 39 `Object.getOwnPropertySymbols` fails on primitives
+	// https://bugs.chromium.org/p/v8/issues/detail?id=3443
+	var FAILS_ON_PRIMITIVES = $fails(function () { $GOPS.f(1); });
+	
+	$export($export.S + $export.F * FAILS_ON_PRIMITIVES, 'Object', {
+	  getOwnPropertySymbols: function getOwnPropertySymbols(it) {
+	    return $GOPS.f(toObject(it));
+	  }
 	});
 	
 	// 24.3.2 JSON.stringify(value [, replacer [, space]])
@@ -2332,6 +2344,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 	// 19.1.2.1 Object.assign(target, source, ...)
+	var DESCRIPTORS = __webpack_require__(25);
 	var getKeys = __webpack_require__(36);
 	var gOPS = __webpack_require__(64);
 	var pIE = __webpack_require__(65);
@@ -2361,7 +2374,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var length = keys.length;
 	    var j = 0;
 	    var key;
-	    while (length > j) if (isEnum.call(S, key = keys[j++])) T[key] = S[key];
+	    while (length > j) {
+	      key = keys[j++];
+	      if (!DESCRIPTORS || isEnum.call(S, key)) T[key] = S[key];
+	    }
 	  } return T;
 	} : $assign;
 
@@ -2522,7 +2538,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    value: function onDrag() {
 	      (0, _util.css)(document.body, { overflow: 'hidden' });
 	      var barWidth = (0, _util.getScrollBarWidth)();
-	      console.log(barWidth, 'barWidth');
+	
 	      if (barWidth) {
 	        (0, _util.css)(document.body, { 'padding-right': barWidth + bodyPaddingRight + 'px' });
 	      }
@@ -2640,11 +2656,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	        (0, _util.css)(t.rows[0].children[0], { width: w + 'px' });
 	      });
 	
-	      var rowHeights = (0, _from2.default)(originEl.rows).map(function (row) {
+	      var rowHeights = (0, _from2.default)(originEl.rows).filter(function (row) {
+	        return row.children.length;
+	      }).map(function (row) {
 	        return row.children[0].getBoundingClientRect().height;
 	      });
 	      fakeTables.forEach(function (t) {
-	        (0, _from2.default)(t.rows).forEach(function (row, index) {
+	        (0, _from2.default)(t.rows).filter(function (row) {
+	          return row.children.length;
+	        }).forEach(function (row, index) {
 	          (0, _util.css)(row, { height: rowHeights[index] + 'px' });
 	        });
 	      });
@@ -2750,7 +2770,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var classes = __webpack_require__(106);
 	var doc = document;
 	var documentElement = doc.documentElement;
-	var oldCoord = 0;
+	var animateDuration = 300;
 	
 	function dragula (initialContainers, options) {
 	  var len = arguments.length;
@@ -2773,49 +2793,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var _grabbed; // holds mousedown context until first mousemove
 	
 	  var o = options || {};
-	  if (o.moves === void 0) {
-	    o.moves = always;
-	  }
-	  if (o.accepts === void 0) {
-	    o.accepts = always;
-	  }
-	  if (o.invalid === void 0) {
-	    o.invalid = invalidTarget;
-	  }
-	  if (o.containers === void 0) {
-	    o.containers = initialContainers || [];
-	  }
-	  if (o.isContainer === void 0) {
-	    o.isContainer = never;
-	  }
-	  if (o.copy === void 0) {
-	    o.copy = false;
-	  }
-	  if (o.copySortSource === void 0) {
-	    o.copySortSource = false;
-	  }
-	  if (o.revertOnSpill === void 0) {
-	    o.revertOnSpill = false;
-	  }
-	  if (o.removeOnSpill === void 0) {
-	    o.removeOnSpill = false;
-	  }
-	  if (o.direction === void 0) {
-	    o.direction = 'vertical';
-	  }
-	  if (o.ignoreInputTextSelection === void 0) {
-	    o.ignoreInputTextSelection = true;
-	  }
-	  if (o.mirrorContainer === void 0) {
-	    o.mirrorContainer = doc.body;
-	  }
-	  if (o.animation === void 0) {
-	    o.animation = false;
-	  }
-	  // 设置静态不动项目
-	  if (o.staticClass === void 0) {
-	    o.staticClass = '';
-	  }
+	  if (o.moves === void 0) { o.moves = always; }
+	  if (o.accepts === void 0) { o.accepts = always; }
+	  if (o.invalid === void 0) { o.invalid = invalidTarget; }
+	  if (o.containers === void 0) { o.containers = initialContainers || []; }
+	  if (o.isContainer === void 0) { o.isContainer = never; }
+	  if (o.copy === void 0) { o.copy = false; }
+	  if (o.copySortSource === void 0) { o.copySortSource = false; }
+	  if (o.revertOnSpill === void 0) { o.revertOnSpill = false; }
+	  if (o.removeOnSpill === void 0) { o.removeOnSpill = false; }
+	  if (o.direction === void 0) { o.direction = 'vertical'; }
+	  if (o.ignoreInputTextSelection === void 0) { o.ignoreInputTextSelection = true; }
+	  if (o.mirrorContainer === void 0) { o.mirrorContainer = doc.body; }
+	  if (o.staticClass === void 0) { o.staticClass = ''; }
+	
 	
 	  var drake = emitter({
 	    containers: o.containers,
@@ -2949,7 +2940,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	    if (!source) {
 	      return;
 	    }
-	    if (o.invalid(item, handle) || (o.staticClass && item.classList.contains(o.staticClass))) {
+	
+	    if ((o.staticClass && item.classList.contains(o.staticClass))) {
+	      return;
+	    }
+	
+	    if (o.invalid(item, handle)) {
 	      return;
 	    }
 	
@@ -3131,7 +3127,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  }
 	
-	
 	  function drag (e) {
 	    if (!_mirror) {
 	      return;
@@ -3163,9 +3158,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return;
 	    }
 	    var reference;
-	    // var mover, moverRect;
-	    // var previous, next, previousRect, nextRect, itemRect;
-	    // var currentPrevious, currentNext;
 	    var immediate = getImmediateChild(dropTarget, elementBehindCursor);
 	    if (immediate !== null) {
 	      reference = getReference(dropTarget, immediate, clientX, clientY);
@@ -3185,18 +3177,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	    ) {
 	      _currentSibling = reference;
 	
-	      var isBrother = item.parentElement === dropTarget;
-	      var shouldAnimate = isBrother && o.animation;
 	      var itemRect = item.getBoundingClientRect();
+	      var referenceRect = reference ? reference.getBoundingClientRect() : null;
 	      var direct = o.direction;
-	      var mover;
-	      var nowCord = direct === 'horizontal' ? e.pageX : e.pageY;
-	      if (nowCord < oldCoord) {
-	        mover = reference; //upward or right
-	      } else {
-	        mover = reference ? (reference.previousElementSibling ? reference.previousElementSibling : reference) : dropTarget.lastElementChild;
+	      // if isPositive is true, the direction is right or down
+	      var isPositive;
+	      if (referenceRect) {
+	        isPositive = direct === 'horizontal' ? (itemRect.x < referenceRect.x) : (itemRect.y < referenceRect.y);
+	      }else{
+	        isPositive = true;
 	      }
-	      oldCoord = nowCord;
+	      // mover is the element to be exchange passively
+	      var mover;
+	      if (isPositive) {
+	        mover = reference ? (reference.previousElementSibling ? reference.previousElementSibling : reference) : dropTarget.lastElementChild;
+	      } else {
+	        mover = reference; //upward or right
+	      }
 	      if (!mover) {
 	        return;
 	      }
@@ -3205,27 +3202,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }
 	      var moverRect = mover && mover.getBoundingClientRect();
 	      dropTarget.insertBefore(item, reference);
-	      if (shouldAnimate && mover && moverRect) {
-	        animate(moverRect, mover, o.animation);
-	        animate(itemRect, item, o.animation);
+	      if (mover && moverRect) {
+	        animate(moverRect, mover);
+	        animate(itemRect, item);
 	      }
 	      drake.emit('shadow', item, dropTarget, _source);
 	    }
-	    function moved (type) {
-	      drake.emit(type, item, _lastDropTarget, _source);
-	    }
-	
-	    function over () {
-	      if (changed) {
-	        moved('over');
-	      }
-	    }
-	
-	    function out () {
-	      if (_lastDropTarget) {
-	        moved('out');
-	      }
-	    }
+	    function moved (type) { drake.emit(type, item, _lastDropTarget, _source); }
+	    function over () { if (changed) { moved('over'); } }
+	    function out () { if (_lastDropTarget) { moved('out'); } }
 	  }
 	
 	  function spillOver (el) {
@@ -3233,9 +3218,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	
 	  function spillOut (el) {
-	    if (drake.dragging) {
-	      classes.add(el, 'gu-hide');
-	    }
+	    if (drake.dragging) { classes.add(el, 'gu-hide'); }
 	  }
 	
 	  function renderMirrorImage () {
@@ -3287,12 +3270,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      for (i = 0; i < len; i++) {
 	        el = dropTarget.children[i];
 	        rect = el.getBoundingClientRect();
-	        if (horizontal && (rect.left + rect.width / 2) > x) {
-	          return el;
-	        }
-	        if (!horizontal && (rect.top + rect.height / 2) > y) {
-	          return el;
-	        }
+	        if (horizontal && (rect.left + rect.width / 2) > x) { return el; }
+	        if (!horizontal && (rect.top + rect.height / 2) > y) { return el; }
 	      }
 	      return null;
 	    }
@@ -3342,15 +3321,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	
 	function whichMouseButton (e) {
-	  if (e.touches !== void 0) {
-	    return e.touches.length;
-	  }
-	  if (e.which !== void 0 && e.which !== 0) {
-	    return e.which;
-	  } // see https://github.com/bevacqua/dragula/issues/261
-	  if (e.buttons !== void 0) {
-	    return e.buttons;
-	  }
+	  if (e.touches !== void 0) { return e.touches.length; }
+	  if (e.which !== void 0 && e.which !== 0) { return e.which; } // see https://github.com/bevacqua/dragula/issues/261
+	  if (e.buttons !== void 0) { return e.buttons; }
 	  var button = e.button;
 	  if (button !== void 0) { // see https://github.com/jquery/jquery/blob/99e8ff1baa7ae341e94bb89c3e84570c7c3ad9ea/src/event.js#L573-L575
 	    return button & 1 ? 1 : button & 2 ? 3 : (button & 4 ? 2 : 0);
@@ -3385,34 +3358,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return el;
 	}
 	
-	function never () {
-	  return false;
-	}
-	function always () {
-	  return true;
-	}
-	function getRectWidth (rect) {
-	  return rect.width || (rect.right - rect.left);
-	}
-	function getRectHeight (rect) {
-	  return rect.height || (rect.bottom - rect.top);
-	}
-	function getParent (el) {
-	  return el.parentNode === doc ? null : el.parentNode;
-	}
-	function isInput (el) {
-	  return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || isEditable(el);
-	}
+	function never () { return false; }
+	function always () { return true; }
+	function getRectWidth (rect) { return rect.width || (rect.right - rect.left); }
+	function getRectHeight (rect) { return rect.height || (rect.bottom - rect.top); }
+	function getParent (el) { return el.parentNode === doc ? null : el.parentNode; }
+	function isInput (el) { return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || isEditable(el); }
 	function isEditable (el) {
-	  if (!el) {
-	    return false;
-	  } // no parents were editable
-	  if (el.contentEditable === 'false') {
-	    return false;
-	  } // stop the lookup
-	  if (el.contentEditable === 'true') {
-	    return true;
-	  } // found a contentEditable element in the chain
+	  if (!el) { return false; } // no parents were editable
+	  if (el.contentEditable === 'false') { return false; } // stop the lookup
+	  if (el.contentEditable === 'true') { return true; } // found a contentEditable element in the chain
 	  return isEditable(getParent(el)); // contentEditable is set to 'inherit'
 	}
 	
@@ -3427,35 +3382,28 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	}
 	
-	// function previousEl (el) {
-	//   return el.previousElementSibling || manually();
-	//   function manually () {
-	//     var sibling = el;
-	//     do {
-	//       sibling = sibling.previousSibling;
-	//     } while (sibling && sibling.nodeType !== 1);
-	//     return sibling;
-	//   }
-	// }
-	
-	function animate (prevRect, target, time) {
-	  if (time) {
-	    if (!prevRect || !target) {
-	      return;
-	    }
-	    var currentRect = target.getBoundingClientRect();
-	    target.style.transition = 'none';
-	    target.style.transform = 'translate3d(' + (prevRect.left - currentRect.left) + 'px,' + (prevRect.top - currentRect.top) + 'px,0)';
-	    target.offsetWidth; // repaint
-	    target.style.transition = 'all ' + time + 'ms';
-	    target.style.transform = 'translate3d(0,0,0)';
-	    clearTimeout(target.animated);
-	    target.animated = setTimeout(function () {
-	      target.style.transition = '';
-	      target.style.transform = '';
-	      target.animated = false;
-	    }, time);
+	/**
+	 * Create an animation from position before sorting to present position
+	 * @param prevRect including element's position infomation before sorting
+	 * @param target element after sorting
+	 */
+	function animate (prevRect, target) {
+	  if (!prevRect || !target) {
+	    return;
 	  }
+	  var currentRect = target.getBoundingClientRect();
+	  var originProps = {transition: target.style.transition, transform: target.style.transform};
+	  Object.assign(target.style, {
+	    transition: 'none',
+	    transform: 'translate(' + (prevRect.left - currentRect.left) + 'px,' + (prevRect.top - currentRect.top) + 'px)'
+	  });
+	  target.offsetWidth; // repaint
+	  Object.assign(target.style, {transition: 'all ' + animateDuration + 'ms', transform: 'translate(0,0)'});
+	  clearTimeout(target.animated);
+	  target.animated = setTimeout(function () {
+	    Object.assign(target.style, {originProps: originProps});
+	    target.animated = false;
+	  }, animateDuration);
 	}
 	
 	
@@ -4332,11 +4280,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    event.initMouseEvent("MSPointerDown", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
 	  } else {
 	    if (document.createEvent) {
-	      console.log('getTouchyEvent document.createEvent if');
 	      event = document.createEvent("MouseEvent");
 	      event.initMouseEvent("mousedown", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
 	    } else {
-	      console.log('getTouchyEvent document.createEvent else');
 	      event = new MouseEvent('mousedown', {
 	        'view': window,
 	        'bubbles': true,

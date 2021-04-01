@@ -56,7 +56,7 @@ export default class Dragger {
   onDrag () {
     css(document.body, { overflow: 'hidden' });
     const barWidth = getScrollBarWidth();
-    console.log(barWidth,'barWidth');
+
     if (barWidth) {
       css(document.body, { 'padding-right': `${barWidth + bodyPaddingRight}px` });
     }
@@ -149,10 +149,13 @@ export default class Dragger {
     );
     // calculate height of every cell
     const rowHeights = Array.from(originEl.rows)
+      .filter(row => row.children.length)
       .map(row => row.children[0].getBoundingClientRect().height);
     fakeTables.forEach((t) => {
       /* eslint-disable no-param-reassign*/
-      Array.from(t.rows).forEach((row, index) => {
+      Array.from(t.rows)
+        .filter(row => row.children.length)
+        .forEach((row, index) => {
         css(row, { height: `${rowHeights[index]}px` });
       });
     });
